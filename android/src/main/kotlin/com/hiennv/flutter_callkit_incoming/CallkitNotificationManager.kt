@@ -1,6 +1,7 @@
 package com.hiennv.flutter_callkit_incoming
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.app.Notification
 import android.app.NotificationChannel
@@ -21,6 +22,7 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
 import android.text.TextUtils
+import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import androidx.appcompat.app.AlertDialog
@@ -51,7 +53,9 @@ class CallkitNotificationManager(private val context: Context) {
     private var notificationId: Int = 9696
     private var dataNotificationPermission: Map<String, Any> = HashMap()
 
+    @SuppressLint("MissingPermission")
     private var targetLoadAvatarDefault = object : Target {
+
         override fun onBitmapLoaded(bitmap: Bitmap?, from: Picasso.LoadedFrom?) {
             notificationBuilder.setLargeIcon(bitmap)
             getNotificationManager().notify(notificationId, notificationBuilder.build())
@@ -64,6 +68,7 @@ class CallkitNotificationManager(private val context: Context) {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private var targetLoadAvatarCustomize = object : Target {
         override fun onBitmapLoaded(bitmap: Bitmap?, from: Picasso.LoadedFrom?) {
             notificationViews?.setImageViewBitmap(R.id.ivAvatar, bitmap)
@@ -81,10 +86,12 @@ class CallkitNotificationManager(private val context: Context) {
     }
 
 
+    @SuppressLint("MissingPermission")
     fun showIncomingNotification(data: Bundle) {
         data.putLong(EXTRA_TIME_START_CALL, System.currentTimeMillis())
 
-        notificationId = data.getString(CallkitConstants.EXTRA_CALLKIT_ID, "callkit_incoming").hashCode()
+        notificationId =
+            data.getString(CallkitConstants.EXTRA_CALLKIT_ID, "callkit_incoming").hashCode()
         createNotificationChanel(
             data.getString(
                 CallkitConstants.EXTRA_CALLKIT_INCOMING_CALL_NOTIFICATION_CHANNEL_NAME,
@@ -107,7 +114,12 @@ class CallkitNotificationManager(private val context: Context) {
         notificationBuilder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
         notificationBuilder.setOngoing(true)
         notificationBuilder.setWhen(0)
-        notificationBuilder.setTimeoutAfter(data.getLong(CallkitConstants.EXTRA_CALLKIT_DURATION, 0L))
+        notificationBuilder.setTimeoutAfter(
+            data.getLong(
+                CallkitConstants.EXTRA_CALLKIT_DURATION,
+                0L
+            )
+        )
         notificationBuilder.setOnlyAlertOnce(true)
         notificationBuilder.setSound(null)
         notificationBuilder.setFullScreenIntent(
@@ -118,17 +130,17 @@ class CallkitNotificationManager(private val context: Context) {
         val typeCall = data.getInt(CallkitConstants.EXTRA_CALLKIT_TYPE, -1)
         var smallIcon = context.applicationInfo.icon
         if (typeCall > 0) {
-            smallIcon = R.drawable.azerigas_logo
+            smallIcon = R.drawable.ic_video
         } else {
             if (smallIcon >= 0) {
-                smallIcon = R.drawable.azerigas_logo
+                smallIcon = R.drawable.ic_accept
             }
         }
         notificationBuilder.setSmallIcon(smallIcon)
         val actionColor = data.getString(CallkitConstants.EXTRA_CALLKIT_ACTION_COLOR, "#4CAF50")
         try {
             notificationBuilder.color = Color.parseColor(actionColor)
-        } catch (error: Exception) {
+        } catch (_: Exception) {
         }
         notificationBuilder.setChannelId(NOTIFICATION_CHANNEL_ID_INCOMING)
         notificationBuilder.priority = NotificationCompat.PRIORITY_MAX
@@ -160,31 +172,36 @@ class CallkitNotificationManager(private val context: Context) {
             notificationBuilder.setCustomBigContentView(notificationViews)
             notificationBuilder.setCustomHeadsUpContentView(notificationSmallViews)
         } else {
-//            val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
-//            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
-//                val headers =
-//                        data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
-//                getPicassoInstance(context, headers).load(avatarUrl)
-//                        .into(targetLoadAvatarDefault)
-//            }
+            val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
+            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
+                val headers =
+                    data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
+                getPicassoInstance(context, headers).load(avatarUrl)
+                    .into(targetLoadAvatarDefault)
+            }
             notificationBuilder.setContentTitle(
                 data.getString(
                     CallkitConstants.EXTRA_CALLKIT_NAME_CALLER,
                     ""
                 )
             )
-            notificationBuilder.setContentText(data.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, ""))
-//            val textDecline = data.getString(CallkitConstants.EXTRA_CALLKIT_TEXT_DECLINE, "")
-//            val declineAction: NotificationCompat.Action = NotificationCompat.Action.Builder(
-//                    R.drawable.ic_decline,
-//                    if (TextUtils.isEmpty(textDecline)) context.getString(R.string.text_decline) else textDecline,
-//                    getDeclinePendingIntent(notificationId, data)
-//            ).build()
-//            notificationBuilder.addAction(declineAction)
+            notificationBuilder.setContentText(
+                data.getString(
+                    CallkitConstants.EXTRA_CALLKIT_HANDLE,
+                    ""
+                )
+            )
+            val textDecline = data.getString(CallkitConstants.EXTRA_CALLKIT_TEXT_DECLINE, "")
+            val declineAction: NotificationCompat.Action = NotificationCompat.Action.Builder(
+                R.drawable.ic_decline,
+                if (TextUtils.isEmpty(textDecline)) context.getString(R.string.text_decline) else textDecline,
+                getDeclinePendingIntent(notificationId, data)
+            ).build()
+            notificationBuilder.addAction(declineAction)
             val textAccept = data.getString(CallkitConstants.EXTRA_CALLKIT_TEXT_ACCEPT, "")
             val acceptAction: NotificationCompat.Action = NotificationCompat.Action.Builder(
                 R.drawable.ic_accept,
-                if (TextUtils.isEmpty(textAccept)) context.getString(R.string.text_accept) else textAccept,
+                if (TextUtils.isEmpty(textDecline)) context.getString(R.string.text_accept) else textAccept,
                 getAcceptPendingIntent(notificationId, data)
             ).build()
             notificationBuilder.addAction(acceptAction)
@@ -199,15 +216,18 @@ class CallkitNotificationManager(private val context: Context) {
             R.id.tvNameCaller,
             data.getString(CallkitConstants.EXTRA_CALLKIT_NAME_CALLER, "")
         )
-        remoteViews.setTextViewText(
-            R.id.tvNumber,
-            data.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, "")
-        )
+        val isShowCallID = data?.getBoolean(CallkitConstants.EXTRA_CALLKIT_IS_SHOW_CALL_ID, false)
+        if (isShowCallID == true) {
+            remoteViews.setTextViewText(
+                R.id.tvNumber,
+                data.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, "")
+            )
+        }
 //        remoteViews.setOnClickPendingIntent(
 //            R.id.llDecline,
 //            getDeclinePendingIntent(notificationId, data)
 //        )
-//        val textDecline = data.getString(CallkitConstants.EXTRA_CALLKIT_TEXT_DECLINE, "")
+        val textDecline = data.getString(CallkitConstants.EXTRA_CALLKIT_TEXT_DECLINE, "")
 //        remoteViews.setTextViewText(
 //            R.id.tvDecline,
 //            if (TextUtils.isEmpty(textDecline)) context.getString(R.string.text_decline) else textDecline
@@ -221,18 +241,19 @@ class CallkitNotificationManager(private val context: Context) {
             R.id.tvAccept,
             if (TextUtils.isEmpty(textAccept)) context.getString(R.string.text_accept) else textAccept
         )
-//        val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
-//        if (avatarUrl != null && avatarUrl.isNotEmpty()) {
-//            val headers =
-//                    data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
-//            getPicassoInstance(context, headers).load(avatarUrl)
-//                    .transform(CircleTransform())
-//                    .into(targetLoadAvatarCustomize)
-//        }
+        val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
+        if (avatarUrl != null && avatarUrl.isNotEmpty()) {
+            val headers =
+                data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
+            getPicassoInstance(context, headers).load(avatarUrl)
+                .transform(CircleTransform())
+                .into(targetLoadAvatarCustomize)
+        }
     }
 
+    @SuppressLint("MissingPermission")
     fun showMissCallNotification(data: Bundle) {
-        notificationId = data.getInt(
+        val missedNotificationId = data.getInt(
             CallkitConstants.EXTRA_CALLKIT_MISSED_CALL_ID,
             data.getString(CallkitConstants.EXTRA_CALLKIT_ID, "callkit_incoming").hashCode() + 1
         )
@@ -250,10 +271,10 @@ class CallkitNotificationManager(private val context: Context) {
         val typeCall = data.getInt(CallkitConstants.EXTRA_CALLKIT_TYPE, -1)
         var smallIcon = context.applicationInfo.icon
         if (typeCall > 0) {
-            smallIcon = R.drawable.azerigas_logo
+            smallIcon = R.drawable.ic_video_missed
         } else {
             if (smallIcon >= 0) {
-                smallIcon = R.drawable.azerigas_logo
+                smallIcon = R.drawable.ic_call_missed
             }
         }
         notificationBuilder = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID_MISSED)
@@ -279,10 +300,14 @@ class CallkitNotificationManager(private val context: Context) {
                 R.id.tvNameCaller,
                 data.getString(CallkitConstants.EXTRA_CALLKIT_NAME_CALLER, "")
             )
-            notificationViews?.setTextViewText(
-                R.id.tvNumber,
-                data.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, "")
-            )
+            val isShowCallID =
+                data?.getBoolean(CallkitConstants.EXTRA_CALLKIT_IS_SHOW_CALL_ID, false)
+            if (isShowCallID == true) {
+                notificationViews?.setTextViewText(
+                    R.id.tvNumber,
+                    data.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, "")
+                )
+            }
             notificationViews?.setOnClickPendingIntent(
                 R.id.llCallback,
                 getCallbackPendingIntent(notificationId, data)
@@ -295,20 +320,21 @@ class CallkitNotificationManager(private val context: Context) {
                 R.id.llCallback,
                 if (isShowCallback) View.VISIBLE else View.GONE
             )
-            val textCallback = data.getString(CallkitConstants.EXTRA_CALLKIT_MISSED_CALL_CALLBACK_TEXT, "")
+            val textCallback =
+                data.getString(CallkitConstants.EXTRA_CALLKIT_MISSED_CALL_CALLBACK_TEXT, "")
             notificationViews?.setTextViewText(
                 R.id.tvCallback,
                 if (TextUtils.isEmpty(textCallback)) context.getString(R.string.text_call_back) else textCallback
             )
 
-//            val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
-//            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
-//                val headers =
-//                        data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
-//
-//                getPicassoInstance(context, headers).load(avatarUrl)
-//                        .transform(CircleTransform()).into(targetLoadAvatarCustomize)
-//            }
+            val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
+            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
+                val headers =
+                    data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
+
+                getPicassoInstance(context, headers).load(avatarUrl)
+                    .transform(CircleTransform()).into(targetLoadAvatarCustomize)
+            }
             notificationBuilder.setStyle(NotificationCompat.DecoratedCustomViewStyle())
             notificationBuilder.setCustomContentView(notificationViews)
             notificationBuilder.setCustomBigContentView(notificationViews)
@@ -319,15 +345,20 @@ class CallkitNotificationManager(private val context: Context) {
                     ""
                 )
             )
-            notificationBuilder.setContentText(data.getString(CallkitConstants.EXTRA_CALLKIT_HANDLE, ""))
-//            val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
-//            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
-//                val headers =
-//                        data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
-//
-//                getPicassoInstance(context, headers).load(avatarUrl)
-//                        .into(targetLoadAvatarDefault)
-//            }
+            notificationBuilder.setContentText(
+                data.getString(
+                    CallkitConstants.EXTRA_CALLKIT_HANDLE,
+                    ""
+                )
+            )
+            val avatarUrl = data.getString(CallkitConstants.EXTRA_CALLKIT_AVATAR, "")
+            if (avatarUrl != null && avatarUrl.isNotEmpty()) {
+                val headers =
+                    data.getSerializable(CallkitConstants.EXTRA_CALLKIT_HEADERS) as HashMap<String, Any?>
+
+                getPicassoInstance(context, headers).load(avatarUrl)
+                    .into(targetLoadAvatarDefault)
+            }
             val isShowCallback = data.getBoolean(
                 CallkitConstants.EXTRA_CALLKIT_MISSED_CALL_CALLBACK_SHOW,
                 true
@@ -356,10 +387,10 @@ class CallkitNotificationManager(private val context: Context) {
         } catch (_: Exception) {
         }
         val notification = notificationBuilder.build()
-        getNotificationManager().notify(notificationId, notification)
+        getNotificationManager().notify(missedNotificationId, notification)
         Handler(Looper.getMainLooper()).postDelayed({
             try {
-                getNotificationManager().notify(notificationId, notification)
+                getNotificationManager().notify(missedNotificationId, notification)
             } catch (_: Exception) {
             }
         }, 1000)
@@ -368,16 +399,20 @@ class CallkitNotificationManager(private val context: Context) {
 
     fun clearIncomingNotification(data: Bundle, isAccepted: Boolean) {
         context.sendBroadcast(CallkitIncomingActivity.getIntentEnded(context, isAccepted))
-        notificationId = data.getString(CallkitConstants.EXTRA_CALLKIT_ID, "callkit_incoming").hashCode()
+        notificationId =
+            data.getString(CallkitConstants.EXTRA_CALLKIT_ID, "callkit_incoming").hashCode()
         getNotificationManager().cancel(notificationId)
     }
 
     fun clearMissCallNotification(data: Bundle) {
-        notificationId = data.getString(CallkitConstants.EXTRA_CALLKIT_ID, "callkit_incoming").hashCode()
-        getNotificationManager().cancel(notificationId)
+        val missedNotificationId = data.getInt(
+            CallkitConstants.EXTRA_CALLKIT_MISSED_CALL_ID,
+            data.getString(CallkitConstants.EXTRA_CALLKIT_ID, "callkit_incoming").hashCode() + 1
+        )
+        getNotificationManager().cancel(missedNotificationId)
         Handler(Looper.getMainLooper()).postDelayed({
             try {
-                getNotificationManager().cancel(notificationId)
+                getNotificationManager().cancel(missedNotificationId)
             } catch (_: Exception) {
             }
         }, 1000)
@@ -486,6 +521,7 @@ class CallkitNotificationManager(private val context: Context) {
         }
     }
 
+
     private fun getNotificationManager(): NotificationManagerCompat {
         return NotificationManagerCompat.from(context)
     }
@@ -511,9 +547,11 @@ class CallkitNotificationManager(private val context: Context) {
         this.dataNotificationPermission = map
         if (Build.VERSION.SDK_INT > 32) {
             activity?.let {
-                ActivityCompat.requestPermissions(it,
+                ActivityCompat.requestPermissions(
+                    it,
                     arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-                    PERMISSION_NOTIFICATION_REQUEST_CODE)
+                    PERMISSION_NOTIFICATION_REQUEST_CODE
+                )
             }
         }
     }
@@ -522,36 +560,60 @@ class CallkitNotificationManager(private val context: Context) {
         when (requestCode) {
             PERMISSION_NOTIFICATION_REQUEST_CODE -> {
                 if (grantResults.isNotEmpty() &&
-                    grantResults[0] === PackageManager.PERMISSION_GRANTED) {
+                    grantResults[0] === PackageManager.PERMISSION_GRANTED
+                ) {
                     // allow
                 } else {
                     //deny
                     activity?.let {
-                        if (ActivityCompat.shouldShowRequestPermissionRationale(it, Manifest.permission.POST_NOTIFICATIONS)) {
+                        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                                it,
+                                Manifest.permission.POST_NOTIFICATIONS
+                            )
+                        ) {
                             //showDialogPermissionRationale()
                             if (this.dataNotificationPermission["rationaleMessagePermission"] != null) {
-                                showDialogMessage(it, this.dataNotificationPermission["rationaleMessagePermission"] as String) { dialog, _ ->
+                                showDialogMessage(
+                                    it,
+                                    this.dataNotificationPermission["rationaleMessagePermission"] as String
+                                ) { dialog, _ ->
                                     dialog?.dismiss()
-                                    requestNotificationPermission(activity, this.dataNotificationPermission)
+                                    requestNotificationPermission(
+                                        activity,
+                                        this.dataNotificationPermission
+                                    )
                                 }
                             } else {
-                                requestNotificationPermission(activity, this.dataNotificationPermission)
+                                requestNotificationPermission(
+                                    activity,
+                                    this.dataNotificationPermission
+                                )
                             }
                         } else {
                             //Open Setting
                             if (this.dataNotificationPermission["postNotificationMessageRequired"] != null) {
-                                showDialogMessage(it, this.dataNotificationPermission["postNotificationMessageRequired"] as String) { dialog, _ ->
+                                showDialogMessage(
+                                    it,
+                                    this.dataNotificationPermission["postNotificationMessageRequired"] as String
+                                ) { dialog, _ ->
                                     dialog?.dismiss()
-                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        Uri.fromParts("package", it.packageName, null))
+                                    val intent = Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", it.packageName, null)
+                                    )
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     it.startActivity(intent)
                                 }
                             } else {
-                                showDialogMessage(it, it.resources.getString(R.string.text_post_notification_message_required)) { dialog, _ ->
+                                showDialogMessage(
+                                    it,
+                                    it.resources.getString(R.string.text_post_notification_message_required)
+                                ) { dialog, _ ->
                                     dialog?.dismiss()
-                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                                        Uri.fromParts("package", it.packageName, null))
+                                    val intent = Intent(
+                                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                        Uri.fromParts("package", it.packageName, null)
+                                    )
                                     intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                                     it.startActivity(intent)
                                 }
@@ -563,7 +625,11 @@ class CallkitNotificationManager(private val context: Context) {
         }
     }
 
-    private fun showDialogMessage(activity: Activity?, message: String, okListener: DialogInterface.OnClickListener) {
+    private fun showDialogMessage(
+        activity: Activity?,
+        message: String,
+        okListener: DialogInterface.OnClickListener
+    ) {
         activity?.let {
             AlertDialog.Builder(it, R.style.DialogTheme)
                 .setMessage(message)

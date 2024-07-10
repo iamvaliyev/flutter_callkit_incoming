@@ -30,6 +30,8 @@ import android.view.ViewGroup.MarginLayoutParams
 import android.os.PowerManager
 import android.text.TextUtils
 import android.util.Log
+import com.google.gson.Gson
+import com.hiennv.flutter_callkit_incoming.models.AdditionalDataModel
 
 
 class CallkitIncomingActivity : Activity() {
@@ -70,8 +72,11 @@ class CallkitIncomingActivity : Activity() {
     private lateinit var ivBackground: ImageView
     private lateinit var llBackgroundAnimation: RippleRelativeLayout
 
+
     private lateinit var tvNameCaller: TextView
+    private lateinit var tvCustomId: TextView
     private lateinit var tvNumber: TextView
+    private lateinit var tvAddress: TextView
     private lateinit var ivLogo: ImageView
     private lateinit var ivAvatar: CircleImageView
 
@@ -163,6 +168,19 @@ class CallkitIncomingActivity : Activity() {
     private fun incomingData(intent: Intent) {
         val data = intent.extras?.getBundle(CallkitConstants.EXTRA_CALLKIT_INCOMING_DATA)
         if (data == null) finish()
+
+        val extraData = data?.getSerializable(CallkitConstants.EXTRA_CALLKIT_EXTRA);
+
+        print(extraData);
+
+        val gson = Gson();
+
+        val additionalDataModel = gson.fromJson(gson.toJson(extraData), AdditionalDataModel::class.java)
+
+        tvNameCaller.text = data?.getString(CallkitConstants.EXTRA_CALLKIT_NAME_CALLER, "")
+        tvCustomId.text = additionalDataModel.custom_id
+        tvNumber.text = additionalDataModel.accident_description
+        tvAddress.text = additionalDataModel.address
 
         val isShowFullLockedScreen = data?.getBoolean(CallkitConstants.EXTRA_CALLKIT_IS_SHOW_FULL_LOCKED_SCREEN, true)
         if(isShowFullLockedScreen == true) {
@@ -260,7 +278,9 @@ class CallkitIncomingActivity : Activity() {
         llBackgroundAnimation.startRippleAnimation()
 
         tvNameCaller = findViewById(R.id.tvNameCaller)
+        tvCustomId = findViewById(R.id.tvCustomId)
         tvNumber = findViewById(R.id.tvNumber)
+        tvAddress = findViewById(R.id.tvAddress)
         ivLogo = findViewById(R.id.ivLogo)
         ivAvatar = findViewById(R.id.ivAvatar)
 
